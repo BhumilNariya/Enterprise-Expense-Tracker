@@ -16,24 +16,24 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     // If it's a 401 error and not a refresh attempt already
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      
+
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         if (!refreshToken) throw new Error('No refresh token found');
-        
+
         // Use a clean axios instance to avoid interceptor loops
         const { data } = await axios.post('http://localhost:8081/api/auth/refresh-token', { refreshToken });
 
         const newToken = data.accessToken;
         const newRefreshToken = data.refreshToken;
-        
+
         localStorage.setItem('token', newToken);
         localStorage.setItem('refreshToken', newRefreshToken);
-        
+
         if (data.email) {
           localStorage.setItem('user', JSON.stringify({
             id: data.id,
@@ -41,11 +41,11 @@ api.interceptors.response.use(
             email: data.email
           }));
         }
-        
+
         // Update both the original request and the global instance
         api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        
+
         return api(originalRequest);
       } catch (refreshError) {
         console.error('Session expired, logging out...');
